@@ -1,0 +1,32 @@
+<html>
+<style type=text/css>{{ get_resource_as_string('static/styles.css') }}</style>
+<title>DAWebmail Database</title>
+<b>DAWebmail's Tadaa!</b>
+
+<p></p>
+
+
+<table>
+<tr>
+	<td> &nbsp; studentID &nbsp; &nbsp; </td>
+	<td> &nbsp; blue &nbsp; &nbsp; </td>
+	<td> &nbsp; registrationTime &nbsp; &nbsp; </td>
+	
+</tr>
+
+<tr> 
+	<td> ------------------ <td>
+</tr>
+
+{% for record in users %}
+<tr> 
+	<td> &nbsp; {{ record.u_studentID|safe }} &nbsp;&nbsp;  </td> 
+	<td> &nbsp; {{ record.u_blue|safe }} &nbsp;&nbsp;  </td> 
+	<td> &nbsp; {{ record.u_registrationTime|safe }} &nbsp;&nbsp;  </td> 
+</tr>
+{% else %}
+<p><em>EMPTY RECORDS</em></p>
+{% endfor %}
+</table>
+<br>
+</html>
