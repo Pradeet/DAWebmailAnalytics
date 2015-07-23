@@ -69,7 +69,7 @@ def heartbeat():
 	return jsonify(dawebmail=True)
 
 @app.route('/v1/student', methods = [u'POST', u'GET'])
-#@auth.login_required
+@auth.login_required
 def student():
 	if request.method == u'POST':
 		json_SID = request.get_json().get('u_studentid', '')
@@ -108,7 +108,7 @@ def student():
 		return jsonify(results = jsonData)
 
 @app.route('/v1/login', methods = [u'POST', u'GET'])
-#@auth.login_required
+@auth.login_required
 def login():
 	if request.method == 'POST':
 		loginDetails = LoginDetails()
@@ -132,7 +132,7 @@ def login():
 		return jsonify(results = jsonData)
 
 @app.route('/v1/location', methods = [u'POST', u'GET'])
-#@auth.login_required
+@auth.login_required
 def location():
 	if request.method == 'POST':
 		locationDetails = LocationDetails()
@@ -157,7 +157,7 @@ def location():
 		return jsonify(results = jsonData)
 
 @app.route('/v1/phone',  methods = [u'POST', u'GET'])
-#@auth.login_required
+@auth.login_required
 def phone():
 	if request.method == 'POST' :
 		phoneDetails = PhoneDetails()
