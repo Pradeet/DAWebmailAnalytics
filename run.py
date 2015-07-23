@@ -7,7 +7,7 @@ from wtforms.fields import StringField, SubmitField
 import json
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dawebmailers.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dawebmailers_v1.0.db'
 app.config['SECRET_KEY'] = 'HALO'
 
 db = SQLAlchemy(app)
@@ -60,15 +60,16 @@ def unauthorized():
 @app.route('/')
 def root():
 	users = User.query.all()
+	logins = LoginDetails.query.all()
+
 	return render_template('index.html', users = users)
 
 @app.route('/heartbeat')
-@auth.login_required
 def heartbeat():
 	return jsonify(dawebmail=True)
 
 @app.route('/v1/student', methods = [u'POST', u'GET'])
-@auth.login_required
+#@auth.login_required
 def student():
 	if request.method == u'POST':
 		json_SID = request.get_json().get('u_studentid', '')
@@ -107,7 +108,7 @@ def student():
 		return jsonify(results = jsonData)
 
 @app.route('/v1/login', methods = [u'POST', u'GET'])
-@auth.login_required
+#@auth.login_required
 def login():
 	if request.method == 'POST':
 		loginDetails = LoginDetails()
@@ -131,7 +132,7 @@ def login():
 		return jsonify(results = jsonData)
 
 @app.route('/v1/location', methods = [u'POST', u'GET'])
-@auth.login_required
+#@auth.login_required
 def location():
 	if request.method == 'POST':
 		locationDetails = LocationDetails()
@@ -156,9 +157,9 @@ def location():
 		return jsonify(results = jsonData)
 
 @app.route('/v1/phone',  methods = [u'POST', u'GET'])
-@auth.login_required
+#@auth.login_required
 def phone():
-	if request.method == 'POST':
+	if request.method == 'POST' :
 		phoneDetails = PhoneDetails()
 		phoneDetails.p_studentID = request.get_json().get('p_studentID','')
 		phoneDetails.p_brand = request.get_json().get('p_brand','')
@@ -176,10 +177,10 @@ def phone():
 		jsonData = []
 		phoneDetails = PhoneDetails.query.all()
 		for phoneDetail in phoneDetails :
-			jsonData.append({'p_studentID':phoneDetail.p_studentID, 'p_brand':p_brand,'p_product':p_product,'p_model':p_model,'p_applist':p_applist,'p_screensize':p_screensize})
+			jsonData.append({'p_studentID':phoneDetail.p_studentID, 'p_brand':phoneDetail.p_brand,'p_product':phoneDetail.p_product,'p_model':phoneDetail.p_model,'p_applist': phoneDetail.p_applist,'p_screensize':phoneDetail.p_screensize})
 
 		return jsonify(results = jsonData)
 
 if __name__ == '__main__' :
 	db.create_all()
-	app.run(host='0.0.0.0', debug=True)
+	app.run(host="192.168.150.1",port=8000, debug=True)
