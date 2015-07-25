@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, make_response
 from flask.ext.httpauth import HTTPBasicAuth
 from flask_sqlalchemy import SQLAlchemy
-from flask import render_template
+from flask import render_template, redirect, url_for
 from socket import gethostname
 
 app = Flask(__name__)
@@ -39,6 +39,8 @@ class LoginDetails(db.Model):
     l_type = db.Column(db.String(63))
     l_connection = db.Column(db.String(63))
     l_connectiondetails = db.Column(db.String(127))
+    l_timetaken = db.Column(db.String(127))
+    l_success = db.Column(db.String(15)) #either true or false
 
 class LocationDetails(db.Model):
     id = db.Column(db.Integer, primary_key = True, autoincrement = True)
@@ -67,9 +69,9 @@ def root():
 def heartbeat():
     return jsonify(dawebmail=True)
 
-@app.route('/v1/student', methods = [u'POST', u'GET'])
+@app.route('/v1/register', methods = [u'POST', u'GET'])
 @auth.login_required
-def student():
+def register():
     if request.method == u'POST':
         jsonData = request.json
 
@@ -103,7 +105,7 @@ def student():
         jsonData = []
         users = User.query.all()
         for user in users :
-            jsonData.append({'u_studentID':user.u_studentID, 'u_blue':user.u_blue, 'u_registrationTime':user.u_registrationTime})
+            jsonData.append({'id':user.id,'u_studentID':user.u_studentID, 'u_blue':user.u_blue, 'u_registrationTime':user.u_registrationTime})
 
         return jsonify(results = jsonData)
 
@@ -136,7 +138,7 @@ def login():
         jsonData = []
         loginDetails = LoginDetails.query.all()
         for loginDetail in loginDetails:
-            jsonData.append({'l_studentID':loginDetail.l_studentID, 'l_timestamp':loginDetail.l_timestamp, 'l_type':loginDetail.l_type, 'l_connection':loginDetail.l_connection, 'l_connectiondetails':loginDetail.l_connectiondetails})
+            jsonData.append({'id':user.id,'l_studentID':loginDetail.l_studentID, 'l_timestamp':loginDetail.l_timestamp, 'l_type':loginDetail.l_type, 'l_connection':loginDetail.l_connection, 'l_connectiondetails':loginDetail.l_connectiondetails})
 
         return jsonify(results = jsonData)
 
@@ -170,7 +172,7 @@ def location():
         jsonData = []
         locationDetails = LocationDetails.query.all()
         for location in locationDetails :
-            jsonData.append({'c_studentID':location.c_studentID, 'c_timestamp':location.c_timestamp,'c_wifiname':location.c_wifiname,'c_ipaddress':location.c_ipaddress, 'c_subnet':location.c_subnet})
+            jsonData.append({'id':user.id,'c_studentID':location.c_studentID, 'c_timestamp':location.c_timestamp,'c_wifiname':location.c_wifiname,'c_ipaddress':location.c_ipaddress, 'c_subnet':location.c_subnet})
 
         return jsonify(results = jsonData)
 
@@ -203,10 +205,26 @@ def phone():
         jsonData = []
         phoneDetails = PhoneDetails.query.all()
         for phoneDetail in phoneDetails :
-            jsonData.append({'p_studentID':phoneDetail.p_studentID, 'p_brand':phoneDetail.p_brand,'p_product':phoneDetail.p_product,'p_model':phoneDetail.p_model,'p_applist': phoneDetail.p_applist,'p_screensize':phoneDetail.p_screensize})
+            jsonData.append({'id':user.id,'p_studentID':phoneDetail.p_studentID, 'p_brand':phoneDetail.p_brand,'p_product':phoneDetail.p_product,'p_model':phoneDetail.p_model,'p_applist': phoneDetail.p_applist,'p_screensize':phoneDetail.p_screensize})
 
         return jsonify(results = jsonData)
 
+@app.route('/v1/delete/<task>/<int:del_id>')
+def delete(task, del_id):
+	
+	if task == 'phone':
+		PhoneDetails.query.filter_by(id = del_id).delete()
+	if task == 'student':
+		User.query.filter_by(id = del_id).delete()
+	if task == 'login':
+		LoginDetails.query.filter_by(id = del_id).delete()
+	if task == 'location':
+		LocationDetails.query.filter_by(id = del_id).delete()
+	
+	db.session.commit()
+	return redirect(url_for(task))
+	
+	
 if __name__ == '__main__' :
     db.create_all()
     if 'liveconsole' not in gethostname():
