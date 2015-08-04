@@ -5,7 +5,7 @@ from flask import render_template, redirect, url_for
 from socket import gethostname
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dawebmailers_v1.1.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/Pradeet/mysite/dawebmailers_v2_0.db'
 app.config['SECRET_KEY'] = 'HALO'
 
 db = SQLAlchemy(app)
@@ -50,6 +50,14 @@ class LocationDetails(db.Model):
     c_ipaddress = db.Column(db.String(63))
     c_subnet = db.Column(db.String(63))
 
+class FeedbackDetails(db.Model):
+	id = db.Column(db.Integer, primary_key = True, autoincrement = True)
+	f_studentID = db.Column(db.String(63))
+	f_feedback = db.Column(db.Text)
+	f_timetoload = db.Column(db.String(511))
+	f_crashreport = db.Column(db.String(511))
+	f_suggestion = db.Column(db.Text)
+
 @auth.get_password
 def get_password(username):
     if username == 'dawebmail' :
@@ -70,7 +78,7 @@ def heartbeat():
     return jsonify(dawebmail=True)
 
 @app.route('/v1/register', methods = [u'POST', u'GET'])
-#@auth.login_required
+@auth.login_required
 def register():
     if request.method == u'POST':
         jsonData = request.json
@@ -128,17 +136,17 @@ def login():
             loginDetails.l_type = json_type
             loginDetails.l_connection = json_connection
             loginDetails.l_connectiondetails = json_connectiondetails
-            
+
             db.session.add(loginDetails)
 
         db.session.commit()
         return "[{'metdata':'metdata'},{'status':'true'}]"
-        
+
     if request.method == 'GET':
         jsonData = []
         loginDetails = LoginDetails.query.all()
         for loginDetail in loginDetails:
-            jsonData.append({'id':user.id,'l_studentID':loginDetail.l_studentID, 'l_timestamp':loginDetail.l_timestamp, 'l_type':loginDetail.l_type, 'l_connection':loginDetail.l_connection, 'l_connectiondetails':loginDetail.l_connectiondetails})
+            jsonData.append({'id':loginDetail.id,'l_studentID':loginDetail.l_studentID, 'l_timestamp':loginDetail.l_timestamp, 'l_type':loginDetail.l_type, 'l_connection':loginDetail.l_connection, 'l_connectiondetails':loginDetail.l_connectiondetails})
 
         return jsonify(results = jsonData)
 
@@ -148,7 +156,7 @@ def location():
     if request.method == 'POST':
 
         for jsonData in request.json :
-         
+
             json_studentID = jsonData['c_studentID']
             json_timestamp = jsonData['c_timestamp']
             json_wifiname = jsonData['c_wifiname']
@@ -163,7 +171,7 @@ def location():
             locationDetails.c_subnet = json_subnet
 
             db.session.add(locationDetails)
-        
+
         db.session.commit()
 
         return "[{'metdata':'metdata'},{'status':'true'}]"
@@ -172,7 +180,7 @@ def location():
         jsonData = []
         locationDetails = LocationDetails.query.all()
         for location in locationDetails :
-            jsonData.append({'id':user.id,'c_studentID':location.c_studentID, 'c_timestamp':location.c_timestamp,'c_wifiname':location.c_wifiname,'c_ipaddress':location.c_ipaddress, 'c_subnet':location.c_subnet})
+            jsonData.append({'id':location.id,'c_studentID':location.c_studentID, 'c_timestamp':location.c_timestamp,'c_wifiname':location.c_wifiname,'c_ipaddress':location.c_ipaddress, 'c_subnet':location.c_subnet})
 
         return jsonify(results = jsonData)
 
@@ -180,7 +188,7 @@ def location():
 @auth.login_required
 def phone():
     if request.method == 'POST' :
-        for jsonData in request.json : 
+        for jsonData in request.json :
             json_studentID = jsonData['p_studentID']
             json_brand = jsonData['p_brand']
             json_product = jsonData['p_product']
@@ -205,13 +213,14 @@ def phone():
         jsonData = []
         phoneDetails = PhoneDetails.query.all()
         for phoneDetail in phoneDetails :
-            jsonData.append({'id':user.id,'p_studentID':phoneDetail.p_studentID, 'p_brand':phoneDetail.p_brand,'p_product':phoneDetail.p_product,'p_model':phoneDetail.p_model,'p_applist': phoneDetail.p_applist,'p_screensize':phoneDetail.p_screensize})
+            jsonData.append({'id':phoneDetail.id,'p_studentID':phoneDetail.p_studentID, 'p_brand':phoneDetail.p_brand,'p_product':phoneDetail.p_product,'p_model':phoneDetail.p_model,'p_applist': phoneDetail.p_applist,'p_screensize':phoneDetail.p_screensize})
 
         return jsonify(results = jsonData)
 
 @app.route('/v1/delete/<task>/<int:del_id>')
+@auth.login_required
 def delete(task, del_id):
-	
+
 	if task == 'phone':
 		PhoneDetails.query.filter_by(id = del_id).delete()
 	if task == 'student':
@@ -220,12 +229,39 @@ def delete(task, del_id):
 		LoginDetails.query.filter_by(id = del_id).delete()
 	if task == 'location':
 		LocationDetails.query.filter_by(id = del_id).delete()
-	
+
 	db.session.commit()
 	return redirect(url_for(task))
-	
-	
+
+@app.route('/v1/feedback', methods = ['GET','POST'])
+@auth.login_required
+def feedback():
+	if request.method == 'POST' :
+		for jsonData in request.json :
+			json_studentID = jsonData['f_studentID']
+			json_feedback = jsonData['f_feedback']
+			json_timetoload = jsonData['f_timetoload']
+			json_crashreport = jsonData['f_crashreport']
+			json_suggestion = jsonData['f_suggestion']
+
+			feedbackDetails = FeedbackDetails()
+			feedbackDetails.f_studentID = json_studentID
+			feedbackDetails.f_feedback  = json_feedback
+			feedbackDetails.f_timetoload = json_timetoload
+			feedbackDetails.f_crashreport = json_crashreport
+			feedbackDetails.f_suggestion = json_suggestion
+		db.session.add(feedbackDetails)
+		db.session.commit()
+		return jsonify(status = True)
+	if request.method == 'GET' :
+		jsonData = []
+        feedbackDetails = FeedbackDetails.query.all()
+        for feedbackDetail in feedbackDetails :
+            jsonData.append({'id':feedbackDetail.id,'f_feedback':feedbackDetail.f_feedback, 'f_timetoload':feedbackDetail.f_timetoload,'f_timetoload':feedbackDetail.f_timetoload,'f_crashreport':feedbackDetail.f_crashreport,'f_suggestion': feedbackDetail.f_suggestion})
+
+        return jsonify(results = jsonData)
+
 if __name__ == '__main__' :
     db.create_all()
     if 'liveconsole' not in gethostname():
-		app.run(host="192.168.150.1",port=8080, debug=True)
+		app.run(debug=False)

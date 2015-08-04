@@ -5,7 +5,7 @@ from flask import render_template, redirect, url_for
 from socket import gethostname
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dawebmailers_v1.1.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dawebmailers_v4.db'
 app.config['SECRET_KEY'] = 'HALO'
 
 db = SQLAlchemy(app)
@@ -32,23 +32,30 @@ class PhoneDetails(db.Model):
     p_applist = db.Column(db.Text)
     p_screensize = db.Column(db.String(127))
 
-class LoginDetails(db.Model):
+class ActionDetails(db.Model):
     id = db.Column(db.Integer, primary_key = True, autoincrement = True)
-    l_studentID = db.Column(db.String(63))
-    l_timestamp = db.Column(db.String(511))
-    l_type = db.Column(db.String(63))
-    l_connection = db.Column(db.String(63))
-    l_connectiondetails = db.Column(db.String(127))
-    l_timetaken = db.Column(db.String(127))
-    l_success = db.Column(db.String(15)) #either true or false
+    a_studentID = db.Column(db.String(63))
+    a_action = db.Column(db.String(511))
+    a_connection = db.Column(db.String(127))
+    a_connectionDetails = db.Column(db.String(127))
+    a_timeStamp = db.Column(db.String(127))
+    a_timeTaken = db.Column(db.String(127))
+    a_success = db.Column(db.String(15)) #either true or false
+    
+    def __init__(self, a_studentID, a_action, a_connection, a_connectionDetails, a_timeStamp, a_timeTaken, a_success):
+        self.a_studentID = a_studentID
+        self.a_action = a_action
+        self.a_connection = a_connection
+        self.a_connectionDetails = a_connectionDetails
+        self.a_timeStamp = a_timeStamp
+        self.a_timeTaken = a_timeTaken
+        self.a_success = a_success
 
-class LocationDetails(db.Model):
-    id = db.Column(db.Integer, primary_key = True, autoincrement = True)
-    c_studentID = db.Column(db.String(63))
-    c_timestamp = db.Column(db.String(63))
-    c_wifiname = db.Column(db.String(63))
-    c_ipaddress = db.Column(db.String(63))
-    c_subnet = db.Column(db.String(63))
+class FeedbackDetails(db.Model):
+	id = db.Column(db.Integer, primary_key = True, autoincrement = True)
+	f_studentID = db.Column(db.String(63))
+	f_feedback = db.Column(db.Text)
+	f_timestamp = db.Column(db.String(511))
 
 @auth.get_password
 def get_password(username):
@@ -61,6 +68,7 @@ def unauthorized():
     return make_response(jsonify({'error': 'Unauthorized access'}), 401)
 
 @app.route('/')
+@auth.login_required
 def root():
     users = User.query.all()
     return render_template('index.html', users = users)
@@ -70,7 +78,7 @@ def heartbeat():
     return jsonify(dawebmail=True)
 
 @app.route('/v1/register', methods = [u'POST', u'GET'])
-#@auth.login_required
+@auth.login_required
 def register():
     if request.method == u'POST':
         jsonData = request.json
@@ -109,78 +117,50 @@ def register():
 
         return jsonify(results = jsonData)
 
-@app.route('/v1/login', methods = [u'POST', u'GET'])
+@app.route('/v1/action', methods = [u'POST', u'GET'])
 @auth.login_required
 def login():
     if request.method == 'POST':
-
         for jsonData in request.json :
 
-            json_studentID = jsonData['l_studentID']
-            json_timestamp = jsonData['l_timestamp']
-            json_type = jsonData['l_type']
-            json_connection = jsonData['l_connection']
-            json_connectiondetails = jsonData['l_connectiondetails']
-
-            loginDetails = LoginDetails()
-            loginDetails.l_studentID = json_studentID
-            loginDetails.l_timestamp = json_timestamp
-            loginDetails.l_type = json_type
-            loginDetails.l_connection = json_connection
-            loginDetails.l_connectiondetails = json_connectiondetails
-            
-            db.session.add(loginDetails)
+            json_studentID = jsonData['a_studentID']
+            json_action = jsonData['a_action']
+            json_connection = jsonData['a_connection']
+            json_connectiondetails = jsonData['a_connectionDetails']
+            json_timestamp = jsonData['a_timeStamp']
+            json_timetaken = jsonData['a_timeTaken']
+            json_success = jsonData['a_success']
+            actionDetails = ActionDetails(json_studentID, json_action, json_connection, json_connectiondetails, json_timestamp, json_timetaken, json_success)
+            db.session.add(actionDetails)
 
         db.session.commit()
         return "[{'metdata':'metdata'},{'status':'true'}]"
-        
+
     if request.method == 'GET':
         jsonData = []
-        loginDetails = LoginDetails.query.all()
-        for loginDetail in loginDetails:
-            jsonData.append({'id':user.id,'l_studentID':loginDetail.l_studentID, 'l_timestamp':loginDetail.l_timestamp, 'l_type':loginDetail.l_type, 'l_connection':loginDetail.l_connection, 'l_connectiondetails':loginDetail.l_connectiondetails})
+        actionDetails = ActionDetails.query.all()
+        for actionDetail in actionDetails:
+            jsonData.append({'id':actionDetail.id,'a_studentID':actionDetail.a_studentID, 'a_action':actionDetail.a_action, 'a_connection':actionDetail.a_connection, 'a_connectionDetails':actionDetail.a_connectionDetails, 'a_timeStamp':actionDetail.a_timeStamp, 'a_timeTaken':actionDetail.a_timeTaken, 'a_success':actionDetail.a_success})
 
         return jsonify(results = jsonData)
 
-@app.route('/v1/location', methods = [u'POST', u'GET'])
+@app.route('/v1/action/<username>')
 @auth.login_required
-def location():
-    if request.method == 'POST':
+def action(username):
+    user_actionDetails = db.session.query(ActionDetails).filter(ActionDetails.a_studentID.in_([username])).order_by("a_action desc").all()
+    return render_template('action.html', username = username, details = user_actionDetails)
 
-        for jsonData in request.json :
-         
-            json_studentID = jsonData['c_studentID']
-            json_timestamp = jsonData['c_timestamp']
-            json_wifiname = jsonData['c_wifiname']
-            json_ipaddress = jsonData['c_ipaddress']
-            json_subnet = jsonData['c_subnet']
-
-            locationDetails = LocationDetails()
-            locationDetails.c_studentID = json_studentID
-            locationDetails.c_timestamp = json_timestamp
-            locationDetails.c_wifiname = json_wifiname
-            locationDetails.c_ipaddress = json_ipaddress
-            locationDetails.c_subnet = json_subnet
-
-            db.session.add(locationDetails)
-        
-        db.session.commit()
-
-        return "[{'metdata':'metdata'},{'status':'true'}]"
-
-    if request.method == 'GET' :
-        jsonData = []
-        locationDetails = LocationDetails.query.all()
-        for location in locationDetails :
-            jsonData.append({'id':user.id,'c_studentID':location.c_studentID, 'c_timestamp':location.c_timestamp,'c_wifiname':location.c_wifiname,'c_ipaddress':location.c_ipaddress, 'c_subnet':location.c_subnet})
-
-        return jsonify(results = jsonData)
+@app.route('/phone')
+@auth.login_required
+def phone_all():
+    phones = db.session.query(PhoneDetails).order_by("p_studentID desc").all()
+    return render_template('phone.html', phones = phones)
 
 @app.route('/v1/phone',  methods = [u'POST', u'GET'])
 @auth.login_required
 def phone():
     if request.method == 'POST' :
-        for jsonData in request.json : 
+        for jsonData in request.json :
             json_studentID = jsonData['p_studentID']
             json_brand = jsonData['p_brand']
             json_product = jsonData['p_product']
@@ -205,27 +185,51 @@ def phone():
         jsonData = []
         phoneDetails = PhoneDetails.query.all()
         for phoneDetail in phoneDetails :
-            jsonData.append({'id':user.id,'p_studentID':phoneDetail.p_studentID, 'p_brand':phoneDetail.p_brand,'p_product':phoneDetail.p_product,'p_model':phoneDetail.p_model,'p_applist': phoneDetail.p_applist,'p_screensize':phoneDetail.p_screensize})
+            jsonData.append({'id':phoneDetail.id,'p_studentID':phoneDetail.p_studentID, 'p_brand':phoneDetail.p_brand,'p_product':phoneDetail.p_product,'p_model':phoneDetail.p_model,'p_applist': phoneDetail.p_applist,'p_screensize':phoneDetail.p_screensize})
 
         return jsonify(results = jsonData)
 
+@app.route('/v1/feedback', methods = ['GET','POST'])
+@auth.login_required
+def feedback():
+	if request.method == 'POST' :
+		for jsonData in request.json :
+			json_studentID = jsonData['f_studentID']
+			json_feedback = jsonData['f_feedback']
+			json_timestamp = jsonData['f_timestamp']
+			
+			feedbackDetails = FeedbackDetails()
+			feedbackDetails.f_studentID = json_studentID
+			feedbackDetails.f_feedback  = json_feedback
+			feedbackDetails.f_timestamp = json_timestamp
+			db.session.add(feedbackDetails)
+		db.session.commit()
+		return '[{"status":"True"}]'
+	if request.method == 'GET' :
+		jsonData = []
+        feedbackDetails = FeedbackDetails.query.all()
+        #for feedbackDetail in feedbackDetails :
+            #jsonData.append({'id':feedbackDetail.id, 'f_studentID':feedbackDetail.f_studentID,'f_feedback':feedbackDetail.f_feedback, 'f_timestamp':feedbackDetail.f_timestamp})
+        #return jsonify(results = jsonData)
+        return render_template('feedback.html', feedbacks = feedbackDetails)
+
 @app.route('/v1/delete/<task>/<int:del_id>')
+@auth.login_required
 def delete(task, del_id):
-	
-	if task == 'phone':
-		PhoneDetails.query.filter_by(id = del_id).delete()
-	if task == 'student':
-		User.query.filter_by(id = del_id).delete()
-	if task == 'login':
-		LoginDetails.query.filter_by(id = del_id).delete()
-	if task == 'location':
-		LocationDetails.query.filter_by(id = del_id).delete()
-	
-	db.session.commit()
-	return redirect(url_for(task))
-	
-	
+
+    if task == 'phone':
+        PhoneDetails.query.filter_by(id = del_id).delete()
+    if task == 'student':
+        User.query.filter_by(id = del_id).delete()
+    if task == 'feedback':
+        FeedbackDetails.query.filter_by(id = del_id).delete()
+    if task == 'action':
+        ActionDetails.query.filter_by(id = del_id).delete()
+
+    db.session.commit()
+    return redirect(url_for(task))
+
 if __name__ == '__main__' :
     db.create_all()
     if 'liveconsole' not in gethostname():
-		app.run(host="192.168.150.1",port=8080, debug=True)
+        app.run(host="192.168.150.1",port=8080, debug=True)

@@ -1,0 +1,26 @@
+<html>
+<style type=text/css>{{ get_resource_as_string('static/styles.css') }}</style>
+<title>Feedbacks</title>
+<b>DAWebmail : Tadaa!</b>
+
+<p></p>
+
+<table>
+
+<tr> 
+	<td> ------------------ <td>
+</tr>
+
+{% for feedback in feedbacks %}
+<tr> 
+	<td> &nbsp; {{ feedback.id|safe }} &nbsp;&nbsp;  </td> 
+	<td> &nbsp; {{ feedback.f_studentID|safe }} &nbsp;&nbsp;  </td> 
+	<td> &nbsp; {{ feedback.f_feedback|safe }} &nbsp;&nbsp;  </td> 
+	<td> &nbsp; {{ feedback.f_timestamp|safe }} &nbsp;&nbsp;  </td> 
+</tr>
+{% else %}
+<p><em>EMPTY RECORDS</em></p>
+{% endfor %}
+</table>
+<br>
+</html>
